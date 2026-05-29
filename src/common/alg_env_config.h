@@ -46,6 +46,7 @@ struct AlgEnvConfig {
     bool aivOnlyMode;
     bool ccuMSMode;
     bool ccuSchedMode;
+    u32 ccuSelectMode;
     bool enableFfts;
     bool execTimeOutSet;
     double execTimeout;
@@ -66,6 +67,7 @@ struct AlgEnvConfig {
         enableFfts = true;
         aicpuCacheEnable = 1; // 默认开启aicpu cache (只有当aicpuUnfold为true时才生效)
         aivOnlyMode = false;
+        ccuSelectMode = 2;
         execTimeOutSet = false;
         execTimeout = 0;
         // 环境变量参数
@@ -145,6 +147,7 @@ const bool& GetExternalInputHcclAivOnlyMode();
 const bool& GetExternalInputHcclCcuMSMode();
 
 const bool& GetExternalInputHcclCcuSchedMode();
+const u32& GetExternalInputCcuSelectMode();
 
 const bool& GetExternalInputInterHccsDisable();
 

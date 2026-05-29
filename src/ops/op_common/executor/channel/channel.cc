@@ -418,9 +418,30 @@ HcclResult GetTopoTypeByLink(HcclComm comm, uint32_t netLayer, CommLink &link, C
 *   获取link对应的channel。对于2个rank之间，存在多条link的场景，会优先获取指定TopoType的1条channel。
 *   如果多条link都没有指定的TopoType，则返回第一条link对应的channel。
 */
+
+
+bool GetFixedLinkIdxForRankPair(u32 myRank, u32 rank, u32 &fixedIdx)
+{
+    u32 lowRank = std::min(myRank, rank);
+    u32 highRank = std::max(myRank, rank);
+
+    if (highRank >= 16 || lowRank % 4 != highRank % 4) {
+        return false;
+    }
+
+    u32 rankDiff = highRank - lowRank;
+    if (rankDiff == 0 || rankDiff % 4 != 0 || rankDiff > 12) {
+        return false;
+    }
+
+    fixedIdx = rankDiff / 4 - 1;
+    return true;
+}
+
 HcclResult ProcessLinksForChannel(HcclComm comm, u32 myRank, u32 rank, std::vector<HcclChannelDesc> &channels, CommTopo priorityTopo)
 {
 #ifndef AICPU_COMPILE
+    constexpr u32 targetProtocol = static_cast<u32>(CommProtocol::COMM_PROTOCOL_UBC_CTP);
     uint32_t *netLayers;
     uint32_t netLayerNum;
     CHK_RET(HcclRankGraphGetLayers(comm, &netLayers, &netLayerNum));
@@ -429,7 +450,16 @@ HcclResult ProcessLinksForChannel(HcclComm comm, u32 myRank, u32 rank, std::vect
         CommLink *linkList = nullptr;
         u32 listSize;
         CHK_RET(HcclRankGraphGetLinks(comm, netLayer, myRank, rank, &linkList, &listSize));
-        HCCL_INFO("[CalcChannelRequestWithPriorTopo] netLayer=%u, linkListSize=%u", netLayer, listSize);
+        std::vector<CommLink> filteredLinks;
+        filteredLinks.reserve(listSize);
+        for (u32 idx = 0; idx < listSize; idx++) {
+            if (linkList[idx].dstEndpointDesc.protocol == targetProtocol) {
+                filteredLinks.push_back(linkList[idx]);
+            }
+        }
+        linkList = filteredLinks.data();
+        listSize = filteredLinks.size();
+        HCCL_INFO("[CalcChannelRequestWithPriorTopo] netLayer=%u, linkListSize after protocol filter=%u", netLayer, listSize);
 
         if (listSize == 0) {
             HCCL_WARNING("[CalcChannelRequestWithPriorTopo]There is no link between rank[%u] and rank[%u].", myRank,
@@ -439,13 +469,22 @@ HcclResult ProcessLinksForChannel(HcclComm comm, u32 myRank, u32 rank, std::vect
 
         uint32_t priorityLink = 0;
         CommTopo topoType;
-        for (u32 idx = 0; idx < listSize; idx++) {
-            CHK_RET(GetTopoTypeByLink(comm, netLayer, linkList[idx], topoType));
-            if (topoType == priorityTopo) {
-                priorityLink = idx;
-                HCCL_INFO("[CalcChannelRequestWithPriorTopo] Found link[%u] with priority topotype[%u].", idx,
-                          topoType);
-                break;
+        u32 fixedIdx = 0;
+        if (GetExternalInputCcuSelectMode() == 2 &&
+            GetFixedLinkIdxForRankPair(myRank, rank, fixedIdx) && fixedIdx < listSize) {
+            priorityLink = fixedIdx;
+            CHK_RET(GetTopoTypeByLink(comm, netLayer, linkList[priorityLink], topoType));
+            HCCL_INFO("[CalcChannelRequestWithPriorTopo] Use fixed link idx[%u] for rank pair[%u, %u], topoType[%u].",
+                      priorityLink, myRank, rank, topoType);
+        } else {
+            for (u32 idx = 0; idx < listSize; idx++) {
+                CHK_RET(GetTopoTypeByLink(comm, netLayer, linkList[idx], topoType));
+                if (topoType == priorityTopo) {
+                    priorityLink = idx;
+                    HCCL_INFO("[CalcChannelRequestWithPriorTopo] Found link[%u] with priority topotype[%u].", idx,
+                              topoType);
+                    break;
+                }
             }
         }
         HcclChannelDesc channelDesc;
