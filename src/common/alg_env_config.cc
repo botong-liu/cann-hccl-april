@@ -12,6 +12,7 @@
 #include <sstream>
 #include <string>
 #include <algorithm>
+#include <cstdlib>
 
 #include "log.h"
 #include "adapter_error_manager_pub.h"
@@ -93,6 +94,26 @@ HcclResult ParseExecTimeout()
 
     g_algEnvConfig.execTimeOutSet = true;
     g_algEnvConfig.execTimeout = execTimeOut;
+    return HCCL_SUCCESS;
+}
+
+HcclResult ParseCcuSelectMode()
+{
+    constexpr u32 ccuSelectModeDefaultValue = 2;
+    const char *ccuSelectModeEnv = std::getenv("CCU_SELECT_MODE");
+    if (ccuSelectModeEnv == nullptr || ccuSelectModeEnv[0] == '\0') {
+        g_algEnvConfig.ccuSelectMode = ccuSelectModeDefaultValue;
+        HCCL_RUN_INFO("CCU_SELECT_MODE is not set, default value is [%u].", g_algEnvConfig.ccuSelectMode);
+        return HCCL_SUCCESS;
+    }
+
+    u32 ccuSelectMode = 0;
+    if (SalStrToULong(ccuSelectModeEnv, HCCL_BASE_DECIMAL, ccuSelectMode) != HCCL_SUCCESS || ccuSelectMode > 2) {
+        HCCL_ERROR("CCU_SELECT_MODE[%s] is invalid, expect 0/1/2.", ccuSelectModeEnv);
+        return HCCL_E_PARA;
+    }
+    g_algEnvConfig.ccuSelectMode = ccuSelectMode;
+    HCCL_RUN_INFO("CCU_SELECT_MODE set by environment to [%u].", g_algEnvConfig.ccuSelectMode);
     return HCCL_SUCCESS;
 }
 
@@ -196,6 +217,13 @@ HcclResult InitEnvConfig()
     CHK_PRT_RET(ret != HCCL_SUCCESS,
         HCCL_ERROR("[Init][EnvVarParam]errNo[0x%016llx] In init env variable param, parse HCCL_EXEC_TIMEOUT failed. "
             "errorno[%d]", HCCL_ERROR_CODE(ret), ret), ret);
+
+    // 解析ccuSelectMode
+    ret = ParseCcuSelectMode();
+    CHK_PRT_RET(ret != HCCL_SUCCESS,
+        HCCL_ERROR("[Init][EnvVarParam]errNo[0x%016llx] parse CCU_SELECT_MODE failed. errorno[%d]",
+            HCCL_ERROR_CODE(ret), ret),
+        ret);
 
     // 解析算法配置
     ret = ParseHcclAlgo();
@@ -934,6 +962,11 @@ const bool &GetExternalInputHcclCcuMSMode()
 const bool &GetExternalInputHcclCcuSchedMode()
 {
     return g_algEnvConfig.ccuSchedMode;
+}
+
+const u32 &GetExternalInputCcuSelectMode()
+{
+    return g_algEnvConfig.ccuSelectMode;
 }
 
 const bool &GetExternalInputInterHccsDisable()

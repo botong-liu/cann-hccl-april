@@ -10,6 +10,11 @@
 
 #include "ccu_kernel_alg_base.h"
 #include "ccu_kernel_utils.h"
+// TEMP: force enable CCU profiling in this translation unit for debugging/perf collection.
+// TODO: remove this hardcode and switch to build flag (-DCcuProfiling) after profiling is finished.
+#ifndef CcuProfiling
+#define CcuProfiling
+#endif
 
 namespace ops_hccl {
 using namespace hcomm;
