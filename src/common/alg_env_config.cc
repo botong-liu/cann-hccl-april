@@ -108,8 +108,8 @@ HcclResult ParseCcuSelectMode()
     }
 
     u32 ccuSelectMode = 0;
-    if (SalStrToULong(ccuSelectModeEnv, HCCL_BASE_DECIMAL, ccuSelectMode) != HCCL_SUCCESS || ccuSelectMode > 2) {
-        HCCL_ERROR("CCU_SELECT_MODE[%s] is invalid, expect 0/1/2.", ccuSelectModeEnv);
+    if (SalStrToULong(ccuSelectModeEnv, HCCL_BASE_DECIMAL, ccuSelectMode) != HCCL_SUCCESS || ccuSelectMode > 3) {
+        HCCL_ERROR("CCU_SELECT_MODE[%s] is invalid, expect 0/1/2/3.", ccuSelectModeEnv);
         return HCCL_E_PARA;
     }
     g_algEnvConfig.ccuSelectMode = ccuSelectMode;
