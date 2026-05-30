@@ -13,16 +13,15 @@
 #include "ccu_assist_pub.h"
 #include "ccu_kernel_all_gather_mesh1d_mem2mem_clos_v3.h"
 #include "ccu_temp_all_gather_mesh_1D_mem2mem_clos_v3.h"
+#include "alg_env_config.h"
 
 namespace ops_hccl {
-namespace {
-constexpr uint64_t MAIN_SLICE_RATIO = 80;
 constexpr uint64_t SLICE_RATIO_BASE = 100;
 
 void CalcMainSharedSliceSize(uint64_t normalSliceSize, uint64_t dataTypeSize, uint64_t &mainSliceSize,
     uint64_t &sharedSliceSize)
 {
-    mainSliceSize = normalSliceSize * MAIN_SLICE_RATIO / SLICE_RATIO_BASE;
+    mainSliceSize = normalSliceSize * GetExternalInputCcuMainSharedRatio() / SLICE_RATIO_BASE;
     mainSliceSize = mainSliceSize / dataTypeSize * dataTypeSize;
     sharedSliceSize = normalSliceSize - mainSliceSize;
     if (mainSliceSize == 0 || sharedSliceSize == 0) {
@@ -30,7 +29,6 @@ void CalcMainSharedSliceSize(uint64_t normalSliceSize, uint64_t dataTypeSize, ui
         sharedSliceSize = 0;
     }
 }
-} // namespace
 
 CcuTempAllGatherMesh1DMem2MemClosV3::CcuTempAllGatherMesh1DMem2MemClosV3(const OpParam& param, const u32 rankId,
                                        const std::vector<std::vector<u32>> &subCommRanks)
