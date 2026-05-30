@@ -47,6 +47,7 @@ struct AlgEnvConfig {
     bool ccuMSMode;
     bool ccuSchedMode;
     u32 ccuSelectMode;
+    u32 ccuMainSharedRatio;
     bool enableFfts;
     bool execTimeOutSet;
     double execTimeout;
@@ -68,6 +69,7 @@ struct AlgEnvConfig {
         aicpuCacheEnable = 1; // 默认开启aicpu cache (只有当aicpuUnfold为true时才生效)
         aivOnlyMode = false;
         ccuSelectMode = 2;
+        ccuMainSharedRatio = 80;
         execTimeOutSet = false;
         execTimeout = 0;
         // 环境变量参数
@@ -132,6 +134,8 @@ HcclResult ParseExecTimeout();
 
 HcclResult ParseCcuSelectMode();
 
+HcclResult ParseCcuMainSharedRatio();
+
 HcclResult SplitHcclRetryEnable(const std::string &retryConfig, std::vector<std::string> &retryEnables);
 
 HcclResult CollectRetryEnableFromConfig(const std::vector<std::string> &retryEnables);
@@ -150,6 +154,8 @@ const bool& GetExternalInputHcclCcuMSMode();
 
 const bool& GetExternalInputHcclCcuSchedMode();
 const u32& GetExternalInputCcuSelectMode();
+
+const u32& GetExternalInputCcuMainSharedRatio();
 
 const bool& GetExternalInputInterHccsDisable();
 
